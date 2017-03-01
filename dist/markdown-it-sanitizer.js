@@ -107,7 +107,7 @@ module.exports = function sanitizer_plugin(md, options) {
       }
 
       /* Customize for pandas table quirks */
-      var pandas_table_quirks = ['<table border="1" class="dataframe">', '</table>', '<tbody>', '</tbody>']
+      var pandas_table_quirks = ['<table border="1" class="dataframe">', '</table>', '<tbody>', '</tbody>', '<tr style="text-align: right;">', '<tr>', '</tr>', '<div>', '</div>']
       if (pandas_table_quirks.indexOf(tag) != -1) {
           return tag;
       }
