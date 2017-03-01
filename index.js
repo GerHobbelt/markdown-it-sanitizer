@@ -105,8 +105,10 @@ module.exports = function sanitizer_plugin(md, options) {
         return '<' + match[1].toLowerCase() + '>';
       }
 
-      if (tag === '<table border="1" class="dataframe">' || tag === '</table>') {
-        return tag;
+      /* Customize for pandas table quirks */
+      var pandas_table_quirks = ['<table border="1" class="dataframe">', '</table>', '<tbody>', '</tbody>']
+      if (pandas_table_quirks.indexOf(tag) != -1) {
+          return tag;
       }
 
       // whitelisted tags
