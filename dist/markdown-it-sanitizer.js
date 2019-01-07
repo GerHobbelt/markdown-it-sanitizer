@@ -1,4 +1,4 @@
-/*! markdown-it-sanitizer 0.4.2 https://github.com/svbergerem/markdown-it-sanitizer @license MIT */(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.markdownitSanitizer = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+/*! markdown-it-sanitizer 0.4.3 https://github.com/svbergerem/markdown-it-sanitizer @license MIT */(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.markdownitSanitizer = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 // Sanitizer
 
 'use strict';
@@ -8,7 +8,7 @@ module.exports = function sanitizer_plugin(md, options) {
   var linkify = md.linkify,
       escapeHtml = md.utils.escapeHtml,
       // <a href="url" title="(optional)"></a>
-      patternLinkOpen = '<a\\shref="([^"<>]*)"(?:\\stitle="([^"<>]*)")?>',
+      patternLinkOpen = '<a\\s([^<>]*href="[^"<>]*"[^<>]*)\\s?>',
       regexpLinkOpen = RegExp(patternLinkOpen, 'i'),
       // <img src="url" alt=""(optional) title=""(optional)>
       patternImage = '<img\\s([^<>]*src="[^"<>]*"[^<>]*)\\s?\\/?>',
@@ -23,9 +23,9 @@ module.exports = function sanitizer_plugin(md, options) {
   var runBalancer = false;
   var j;
 
-
   var allowedTags = [ 'a', 'b', 'blockquote', 'code', 'em', 'h1', 'h2', 'h3', 'h4', 'h5',
-                     'h6', 'li', 'ol', 'p', 'pre', 's', 'sub', 'sup', 'strong', 'ul' ];
+                     'h6', 'li', 'ol', 'p', 'pre', 's', 'sub', 'sup', 'strong', 'ul',
+                     'tr', 'td', 'thead', 'tbody', 'th' ];
   var openTagCount = new Array(allowedTags.length);
   var removeTag = new Array(allowedTags.length);
   for (j = 0; j < allowedTags.length; j++) { openTagCount[j] = 0; }
@@ -51,7 +51,7 @@ module.exports = function sanitizer_plugin(md, options) {
      * -> it's a tag!
      */
     str = str.replace(/<[^<>]*>?/gi, function (tag) {
-      var match, url, alt, title, tagnameIndex;
+      var match, attrs, url, alt, title, tagnameIndex;
 
       // '<->', '<- ' and '<3 ' look nice, they are harmless
       if (/(^<->|^<-\s|^<3\s)/.test(tag)) { return tag; }
@@ -59,7 +59,7 @@ module.exports = function sanitizer_plugin(md, options) {
       // images
       match = tag.match(regexpImage);
       if (match) {
-        var attrs = match[1];
+        attrs = match[1];
         url   = getUrl(attrs.match(/src="([^"<>]*)"/i)[1]);
         alt   = attrs.match(/alt="([^"<>]*)"/i);
         alt   = (alt && typeof alt[1] !== 'undefined') ? alt[1] : '';
@@ -79,8 +79,10 @@ module.exports = function sanitizer_plugin(md, options) {
       tagnameIndex = allowedTags.indexOf('a');
       match = tag.match(regexpLinkOpen);
       if (match) {
-        title = (typeof match[2] !== 'undefined') ? match[2] : '';
-        url   = getUrl(match[1]);
+        attrs = match[1];
+        url   = getUrl(attrs.match(/href="([^"<>]*)"/i)[1]);
+        title = attrs.match(/title="([^"<>]*)"/i);
+        title = (title && typeof title[1] !== 'undefined') ? title[1] : '';
         // only http, https, ftp, mailto and xmpp are allowed for links
         if (url && regexpLinkProtocols.test(url)) {
           runBalancer = true;
@@ -104,8 +106,14 @@ module.exports = function sanitizer_plugin(md, options) {
         return '<' + match[1].toLowerCase() + '>';
       }
 
+      /* Customize for pandas table quirks */
+      var pandas_table_quirks = ['<table border="1" class="dataframe">', '</table>', '<tbody>', '</tbody>', '<tr style="text-align: right;">', '<tr>', '</tr>', '<div>', '</div>']
+      if (pandas_table_quirks.indexOf(tag) != -1) {
+          return tag;
+      }
+
       // whitelisted tags
-      match = tag.match(/<(\/?)(b|blockquote|code|em|h[1-6]|li|ol(?: start="\d+")?|p|pre|s|sub|sup|strong|ul)>/i);
+      match = tag.match(/<(\/?)(b|blockquote|code|em|h[1-6]|li|ol(?: start="\d+")?|p|pre|s|sub|sup|strong|ul|tr|thead|tbody|th|table|td)>/i);
       if (match && !/<\/ol start="\d+"/i.test(tag)) {
         runBalancer = true;
         tagnameIndex = allowedTags.indexOf(match[2].toLowerCase().split(' ')[0]);

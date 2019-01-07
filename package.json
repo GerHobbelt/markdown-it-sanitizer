@@ -1,6 +1,6 @@
 {
   "name": "@gerhobbelt/markdown-it-sanitizer",
-  "version": "0.4.2-1",
+  "version": "0.4.3-1",
   "description": "sanitizer for markdown-it.",
   "keywords": [
     "markdown-it-plugin",
