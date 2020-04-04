@@ -225,6 +225,6 @@ module.exports = function sanitizer_plugin(md, options) {
     }
   }
 
-  md.core.ruler.after('linkify', 'sanitize_inline', sanitizeInlineAndBlock);
+  md.core.ruler.before('replacements', 'sanitize_inline', sanitizeInlineAndBlock);
   md.core.ruler.after('sanitize_inline', 'sanitize_balance', balance);
 };
